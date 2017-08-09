@@ -17,7 +17,9 @@
     transform: rotate(359deg);
   }
 }
-
+.bullet {
+  margin: 0 .5em;
+}
 .spinner {
   $color: orange;
 

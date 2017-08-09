@@ -124,10 +124,14 @@ class Dispatcher:
     
     def evaluate(self):
         try:
-            ans = eval(self.query.map(def(c): return c=="^"? "**" : c;).join("")).toString()
-            #TODO: eval may return undefined
-            self.query = [ans]
-            self.rendered_query = [ans]
+            if self.query.length > 0:
+                ans = eval(self.query.map(def(c): return c=="^"? "**" : c;).join("")).toString()
+                if $.isNumeric(ans):
+                    ans = Number(ans)
+                    if ans % 1 != 0:
+                        ans = ans.toPrecision(3)
+                self.query = [ans]
+                self.rendered_query = [ans]
         except Error as E:
             print(E)
             self.query = []
