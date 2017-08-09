@@ -128,14 +128,18 @@ class Dispatcher:
                 ans = eval(self.query.map(def(c): return c=="^"? "**" : c;).join("")).toString()
                 if $.isNumeric(ans):
                     ans = Number(ans)
-                    if ans % 1 != 0:
-                        ans = ans.toPrecision(3)
-                self.query = [ans]
-                self.rendered_query = [ans]
+                    if ans % 1 != 0: # ans is float
+                        rendered_ans = ans.toPrecision(3)
+                    else:            # ans is integer
+                        rendered_ans = ans
+                else:
+                    rendered_ans = ans
         except Error as E:
-            print(E)
-            self.query = []
-            self.rendered_query = ["Error"]
+            ans = "NaN"
+            rendered_ans = "Error"
+        
+        self.query = [ans]
+        self.rendered_query = [rendered_ans]
         self.root.__rerender__(0, self.rendered_query)
     
     def prepare(self):
@@ -147,7 +151,7 @@ class Screen(Nod):
         Nod.__init__(self)
     
     def __render__(self, query):
-        return $("<div>").addClass("screen").html(query? query.join("") : "")
+        return $("<div>").addClass("screen").html(query and query.length>0? query.join("") : "")
 
 
 class Keyboard(Nod):
