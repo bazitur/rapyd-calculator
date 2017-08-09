@@ -135,7 +135,7 @@ class Dispatcher:
                 else:
                     rendered_ans = ans
         except Error as E:
-            ans = "NaN"
+            ans = "Error"
             rendered_ans = "Error"
         
         self.query = [ans]
