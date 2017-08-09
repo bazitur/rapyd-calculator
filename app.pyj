@@ -124,6 +124,8 @@ class Dispatcher:
     
     def evaluate(self):
         try:
+            if "Error" in self.query:
+                raise Error("Cannot perform operations with error")
             if self.query.length > 0:
                 ans = eval(self.query.map(def(c): return c=="^"? "**" : c;).join("")).toString()
                 if $.isNumeric(ans):
