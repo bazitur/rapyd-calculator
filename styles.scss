@@ -1,0 +1,126 @@
+@import "minireset.css";
+@import url('https://fonts.googleapis.com/css?family=Lato:300,400&subset=latin-ext');
+
+// remove nasty focus borders in Firefox and Chrome
+:focus {
+  outline:none;
+}
+::-moz-focus-inner {
+  border:0;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(359deg);
+  }
+}
+
+.spinner {
+  $color: orange;
+
+  height: 30px;
+  width: 30px;
+  margin: 20px auto;
+  border-radius: 100%;
+
+  border-top: 3px solid $color;
+  border-right: 3px solid $color;
+  border-bottom: 3px solid $color;
+  border-left: 3px solid transparent;
+  animation: rotate .5s infinite linear;
+}
+
+h1, p {
+  text-align: center;
+}
+h1 {
+  font-size: 2.7rem;
+  margin: 0.5em 0 0.3em 0;
+}
+p {
+  $color: grey;
+  color: $color;
+  margin: .8em 0;
+  a {
+    text-decoration: none;
+    transition: color 0.3s;
+    color: $color;
+    &:hover {
+      color: darken($color, 30%);
+    }
+  }
+}
+
+body {
+  font-family: "Lato", "Roboto", "Segoe UI", "Helvetica Neue", "Helvetica", "Arial", sans-serif;
+  font-size: 16px;
+  padding: 5px;
+  background-color: #E6E6E6;
+}
+.app {
+  margin: 0 auto;
+  max-width: 300px;
+  box-shadow: 0 5px 20px 3px rgba(0, 0, 0, 0.05);
+  $border: 1px solid #c1c1c1;
+  $button-background-color: #f1f1f1;
+  $button-color: black;
+  $screen-background-color: #f6f6f6;
+  $screen-color: black;
+  .screen {
+    text-align: right;
+    background-color: $screen-background-color;
+    overflow-x: auto;
+    color: $screen-color;
+    padding: 5px;
+    border: $border;
+    border-bottom: none;
+    font-size: 2.25rem;
+    padding: 0.5em 0.25em 0.35em 0.25em;
+    &::before {
+      content: "\2060"; // fix empty height
+    }
+  }
+
+  .keyboard {
+    border-top: $border;
+    border-left: $border;
+    .button {
+      background-color: $button-background-color;
+      color: $button-color;
+      display: inline-block;
+      border-radius: 0;
+      margin: 0;
+      padding: 0.5em 0.25em;
+      font-size: 2rem;
+      font-family: inherit;
+      border-left: none;
+      border-right: $border;
+      border-top: none;
+      border-bottom: $border;
+      transition: all 0.3s;
+
+      &:hover {
+        background-color: darken($button-background-color, 5%);
+      }
+      &.is-1 {
+        width: 25%;
+      }
+      &.is-2 {
+        width: 50%;
+      }
+      &.colored {
+        background-color: orange;
+        color: white;
+        &:not(:last-child) {
+          border-bottom: 1px solid darkorange;
+        }
+        &:hover {
+          background-color: darkorange;
+        }
+      }
+    }
+  }
+}

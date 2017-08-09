@@ -1,0 +1,207 @@
+class Nod:
+    def __init__(self):
+        self.children = []
+        self.name = type(self)
+    
+    def add_child(self, child, pass_dispatcher=False):
+        if not isinstance(child, Nod):
+            raise Error("Invalid child")
+        
+        if pass_dispatcher:
+            if not self.dispatcher:
+                raise Error("Cannot pass dispatcher to child: parent has no dispatcher")
+            child.clip_dispatcher(self.dispatcher)
+        child.DOM_path = self.DOM_path + " ." + child.name.toLowerCase()
+        self.children.push(child)
+    
+    def add_children(self, children, pass_dispatcher=False):
+        for c in children:
+            self.add_child(c, pass_dispatcher)
+    
+    def __render__(self):  # default rendering: <div> with all children inside
+        div = $("<div>").addClass(self.name.toLowerCase())
+        for i, child in enumerate(self.children):
+            if isinstance(child, Nod):
+                div.append(child.__render__().data("idx", i))
+            else:
+                raise Error("Invalid child with type '"+ type(child) +"'")
+        return div
+    
+    def __rerender__(self, index, *args):
+        child = self.children[index]
+        $(child.DOM_path).replaceWith(child.__render__(*args))
+    
+    def clip_dispatcher(self, dispatcher):
+        self.dispatcher = dispatcher
+        if hasattr(self, "dispatcher_clipped"):
+            self.dispatcher_clipped()
+
+
+class Button(Nod):
+    def __init__(self, title, span=1, keybinding=None):
+        Nod.__init__(self)
+        self.title = title
+        self.span = span
+        self.keybinding = keybinding
+    
+    def dispatcher_clipped(self):
+        if self.keybinding:
+            self.dispatcher.add_keybinding(self.keybinding.toString(),
+                                           self.handle_click)
+    def _handler(self):
+        if hasattr(self, "handle_click"):
+            self.handle_click(self.dispatcher)
+    
+    def __render__(self):
+        b = $("<button>").addClass("button is-" + self.span)
+        .html(self.title)
+        .on("click", self._handler)
+        return b
+
+
+class Digit(Button):
+    def __init__(self, digit):
+        Button.__init__(self, digit, 1, digit.toString())
+        self.digit = digit
+    
+    def handle_click(self, dispatcher):
+        dispatcher.push_char(self.digit, self.digit)
+
+
+class Operator(Button):
+    def __init__(self, rendering, operator, span=1, colored=False):
+        Button.__init__(self, rendering, span, operator)
+        self.operator = operator
+        self.rendering = rendering
+        self.colored = colored
+    
+    def handle_click(self, dispatcher):
+        dispatcher.push_char(self.operator, self.rendering)
+    
+    def __render__(self):
+        b = Button.__render__(self)
+        if self.colored:
+            b.addClass("colored")
+        return b
+
+
+class Special(Button):
+    def __init__(self, title, handler, span=1, keybinding=None):
+        Button.__init__(self, title, span, keybinding)
+        self.handler = handler
+    
+    def handle_click(self, dispatcher):
+        self.handler(dispatcher)
+
+class Dispatcher:
+    def __init__(self, root):
+        self.root = root
+        self.name = type(self)
+        self.keybindings = {}
+        self.query = []
+        self.rendered_query = []
+    
+    def add_keybinding(self, key, foo):
+        self.keybindings[key] = foo
+    
+    def handle_keydown(self, event):
+        if not event.defaultPrevented:
+            key = event.key
+            if hasattr(self.keybindings, key):
+                self.keybindings[key](self)
+                event.preventDefault();
+    
+    def push_char(self, real, render):
+        self.query.push(real)
+        self.rendered_query.push(render)
+        self.root.__rerender__(0, self.rendered_query)
+    
+    def pop_char(self):
+        self.query.pop()
+        self.rendered_query.pop()
+        self.root.__rerender__(0, self.rendered_query)
+        return self.query.length > 0
+    
+    def evaluate(self):
+        try:
+            ans = eval(self.query.map(def(c): return c=="^"? "**" : c;).join("")).toString()
+            #TODO: eval may return undefined
+            self.query = [ans]
+            self.rendered_query = [ans]
+        except Error as E:
+            print(E)
+            self.query = []
+            self.rendered_query = ["Error"]
+        self.root.__rerender__(0, self.rendered_query)
+    
+    def prepare(self):
+        window.addEventListener("keydown", self.handle_keydown)
+
+
+class Screen(Nod):
+    def __init__(self):
+        Nod.__init__(self)
+    
+    def __render__(self, query):
+        return $("<div>").addClass("screen").html(query? query.join("") : "")
+
+
+class Keyboard(Nod):
+    def __init__(self):
+        Nod.__init__(self)
+        
+        def handle_clear(dispatcher):
+            while dispatcher.query.length > 0:
+                dispatcher.pop_char()
+        
+        def remove_last(dispatcher):
+            dispatcher.pop_char()
+        
+        def evaluate(dispatcher):
+            dispatcher.evaluate()
+        
+        CLEAR =    Special("C", handle_clear, 1, "Delete")
+        DELETE =   Special("<", remove_last,  1, "Backspace")
+        EVALUATE = Special("=", evaluate,     2, "Enter")
+        
+        PLUS =     Operator("+", "+", 1, True)
+        MINUS =    Operator("&ndash;", "-", 1, True)
+        TIMES =    Operator("&times;", "*", 1, True)
+        DIVIDE =   Operator("&divide;", "/", 1, True)
+        DELIM =    Operator(".", ".")
+        POWER =    Operator("^", "^")
+        
+        self.grid = [
+            CLEAR,    DELETE,   EVALUATE,
+            Digit(7), Digit(8), Digit(9), PLUS,
+            Digit(4), Digit(5), Digit(6), MINUS,
+            Digit(1), Digit(2), Digit(3), TIMES,
+            DELIM,    Digit(0), POWER,    DIVIDE
+        ]
+    
+    def dispatcher_clipped(self):
+        self.add_children(self.grid, True)
+
+class App(Nod):
+    def __init__(self, root):
+        Nod.__init__(self)
+        self.root = $(root)
+        self.DOM_path = root
+        self.clip_dispatcher(Dispatcher(self))
+        
+        self.add_child(Screen())
+        self.add_child(Keyboard(), True)
+        
+        self.dispatcher.prepare()
+    
+    def run(self):
+        self.root
+        .hide()
+        .html(self.__render__())
+        .fadeIn(500)
+
+if __name__ == "__main__":
+    $(document).ready(def():
+        app = App("#root")
+        app.run()
+    )
