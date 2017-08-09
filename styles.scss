@@ -103,6 +103,7 @@ body {
       border-top: none;
       border-bottom: $border;
       transition: all 0.3s;
+      cursor: pointer;
 
       &:hover {
         background-color: darken($button-background-color, 5%);
