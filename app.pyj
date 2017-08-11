@@ -1,9 +1,15 @@
 class Nod:
+    """
+    Base of all app tree nods
+    """
     def __init__(self):
         self.children = []
         self.name = type(self)
     
     def add_child(self, child, pass_dispatcher=False):
+        """
+        Add child to current node
+        """
         if not isinstance(child, Nod):
             raise Error("Invalid child")
         
@@ -15,10 +21,17 @@ class Nod:
         self.children.push(child)
     
     def add_children(self, children, pass_dispatcher=False):
+        """
+        Add multiple children to current node
+        """
         for c in children:
             self.add_child(c, pass_dispatcher)
     
-    def __render__(self):  # default rendering: <div> with all children inside
+    def __render__(self):
+        """
+        Render current Nod
+        Default rendering: <div> with all children inside
+        """
         div = $("<div>").addClass(self.name.toLowerCase())
         for i, child in enumerate(self.children):
             if isinstance(child, Nod):
@@ -28,16 +41,27 @@ class Nod:
         return div
     
     def __rerender__(self, index, *args):
+        """
+        Rerender Nod's child with some index.
+        Args are passed to the child's __render__ method.
+        """
         child = self.children[index]
         $(child.DOM_path).replaceWith(child.__render__(*args))
     
     def clip_dispatcher(self, dispatcher):
+        """
+        Clip app Dispatcher to this Nod.
+        If this nod has `dispatcher_clipped` method, it will be fired.
+        """
         self.dispatcher = dispatcher
         if hasattr(self, "dispatcher_clipped"):
             self.dispatcher_clipped()
 
 
 class Button(Nod):
+    """
+    Base class for all buttons
+    """
     def __init__(self, title, span=1, keybinding=None):
         Nod.__init__(self)
         self.title = title
@@ -49,10 +73,16 @@ class Button(Nod):
             self.dispatcher.add_keybinding(self.keybinding.toString(),
                                            self.handle_click)
     def _handler(self):
+        """
+        Wrapper for a handle_click method (inheritance hack, basically).
+        """
         if hasattr(self, "handle_click"):
             self.handle_click(self.dispatcher)
     
     def __render__(self):
+        """
+        Render this Button.
+        """
         b = $("<button>").addClass("button is-" + self.span)
         .html(self.title)
         .on("click", self._handler)
@@ -60,6 +90,9 @@ class Button(Nod):
 
 
 class Digit(Button):
+    """
+    Digit Button (e.g. 1, 2, ...).
+    """
     def __init__(self, digit):
         Button.__init__(self, digit, 1, digit.toString())
         self.digit = digit
@@ -69,6 +102,9 @@ class Digit(Button):
 
 
 class Operator(Button):
+    """
+    Operator button (e.g. +, -, ...).
+    """
     def __init__(self, rendering, operator, span=1, colored=False):
         Button.__init__(self, rendering, span, operator)
         self.operator = operator
@@ -86,6 +122,9 @@ class Operator(Button):
 
 
 class Special(Button):
+    """
+    Special button, handler function is fired on click.
+    """
     def __init__(self, title, handler, span=1, keybinding=None):
         Button.__init__(self, title, span, keybinding)
         self.handler = handler
@@ -94,6 +133,9 @@ class Special(Button):
         self.handler(dispatcher)
 
 class Dispatcher:
+    """
+    App's global Dispatcher object, used for event managing.
+    """
     def __init__(self, root):
         self.root = root
         self.name = type(self)
@@ -112,6 +154,9 @@ class Dispatcher:
                 event.preventDefault();
     
     def push_char(self, real, render):
+        if "Error" in self.query:
+            self.query = []
+            self.rendered_query = []
         self.query.push(real)
         self.rendered_query.push(render)
         self.root.__rerender__(0, self.rendered_query)
@@ -149,6 +194,9 @@ class Dispatcher:
 
 
 class Screen(Nod):
+    """
+    App-specific Screen object constructor
+    """
     def __init__(self):
         Nod.__init__(self)
     
@@ -157,17 +205,29 @@ class Screen(Nod):
 
 
 class Keyboard(Nod):
+    """
+    App-specific Keyboard object constructor.
+    """
     def __init__(self):
         Nod.__init__(self)
         
         def handle_clear(dispatcher):
+            """
+            Clear all the query
+            """
             while dispatcher.query.length > 0:
                 dispatcher.pop_char()
         
         def remove_last(dispatcher):
+            """
+            Remove only the last element from the query.
+            """
             dispatcher.pop_char()
         
         def evaluate(dispatcher):
+            """
+            Calculate the result and show it on the Screen.
+            """
             dispatcher.evaluate()
         
         CLEAR =    Special("C", handle_clear, 1, "Delete")
@@ -193,6 +253,9 @@ class Keyboard(Nod):
         self.add_children(self.grid, True)
 
 class App(Nod):
+    """
+    Main App constructor
+    """
     def __init__(self, root):
         Nod.__init__(self)
         self.root = $(root)
