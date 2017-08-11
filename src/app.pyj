@@ -5,28 +5,28 @@ class Nod:
     def __init__(self):
         self.children = []
         self.name = type(self)
-    
+
     def add_child(self, child, pass_dispatcher=False):
         """
         Add child to current node
         """
         if not isinstance(child, Nod):
             raise Error("Invalid child")
-        
+
         if pass_dispatcher:
             if not self.dispatcher:
                 raise Error("Cannot pass dispatcher to child: parent has no dispatcher")
             child.clip_dispatcher(self.dispatcher)
         child.DOM_path = self.DOM_path + " ." + child.name.toLowerCase()
         self.children.push(child)
-    
+
     def add_children(self, children, pass_dispatcher=False):
         """
         Add multiple children to current node
         """
         for c in children:
             self.add_child(c, pass_dispatcher)
-    
+
     def __render__(self):
         """
         Render current Nod
@@ -39,7 +39,7 @@ class Nod:
             else:
                 raise Error("Invalid child with type '"+ type(child) +"'")
         return div
-    
+
     def __rerender__(self, index, *args):
         """
         Rerender Nod's child with some index.
@@ -47,7 +47,7 @@ class Nod:
         """
         child = self.children[index]
         $(child.DOM_path).replaceWith(child.__render__(*args))
-    
+
     def clip_dispatcher(self, dispatcher):
         """
         Clip app Dispatcher to this Nod.
@@ -67,7 +67,7 @@ class Button(Nod):
         self.title = title
         self.span = span
         self.keybinding = keybinding
-    
+
     def dispatcher_clipped(self):
         if self.keybinding:
             self.dispatcher.add_keybinding(self.keybinding.toString(),
@@ -78,7 +78,7 @@ class Button(Nod):
         """
         if hasattr(self, "handle_click"):
             self.handle_click(self.dispatcher)
-    
+
     def __render__(self):
         """
         Render this Button.
@@ -96,7 +96,7 @@ class Digit(Button):
     def __init__(self, digit):
         Button.__init__(self, digit, 1, digit.toString())
         self.digit = digit
-    
+
     def handle_click(self, dispatcher):
         dispatcher.push_char(self.digit, self.digit)
 
@@ -110,10 +110,10 @@ class Operator(Button):
         self.operator = operator
         self.rendering = rendering
         self.colored = colored
-    
+
     def handle_click(self, dispatcher):
         dispatcher.push_char(self.operator, self.rendering)
-    
+
     def __render__(self):
         b = Button.__render__(self)
         if self.colored:
@@ -128,7 +128,7 @@ class Special(Button):
     def __init__(self, title, handler, span=1, keybinding=None):
         Button.__init__(self, title, span, keybinding)
         self.handler = handler
-    
+
     def handle_click(self, dispatcher):
         self.handler(dispatcher)
 
@@ -142,17 +142,17 @@ class Dispatcher:
         self.keybindings = {}
         self.query = []
         self.rendered_query = []
-    
+
     def add_keybinding(self, key, foo):
         self.keybindings[key] = foo
-    
+
     def handle_keydown(self, event):
         if not event.defaultPrevented:
             key = event.key
             if hasattr(self.keybindings, key):
                 self.keybindings[key](self)
                 event.preventDefault();
-    
+
     def push_char(self, real, render):
         if "Error" in self.query:
             self.query = []
@@ -160,13 +160,13 @@ class Dispatcher:
         self.query.push(real)
         self.rendered_query.push(render)
         self.root.__rerender__(0, self.rendered_query)
-    
+
     def pop_char(self):
         self.query.pop()
         self.rendered_query.pop()
         self.root.__rerender__(0, self.rendered_query)
         return self.query.length > 0
-    
+
     def evaluate(self):
         try:
             if "Error" in self.query:
@@ -184,11 +184,11 @@ class Dispatcher:
         except Error as E:
             ans = "Error"
             rendered_ans = "Error"
-        
+
         self.query = [ans]
         self.rendered_query = [rendered_ans]
         self.root.__rerender__(0, self.rendered_query)
-    
+
     def prepare(self):
         window.addEventListener("keydown", self.handle_keydown)
 
@@ -199,7 +199,7 @@ class Screen(Nod):
     """
     def __init__(self):
         Nod.__init__(self)
-    
+
     def __render__(self, query):
         return $("<div>").addClass("screen").html(query and query.length>0? query.join("") : "")
 
@@ -210,37 +210,37 @@ class Keyboard(Nod):
     """
     def __init__(self):
         Nod.__init__(self)
-        
+
         def handle_clear(dispatcher):
             """
             Clear all the query
             """
             while dispatcher.query.length > 0:
                 dispatcher.pop_char()
-        
+
         def remove_last(dispatcher):
             """
             Remove only the last element from the query.
             """
             dispatcher.pop_char()
-        
+
         def evaluate(dispatcher):
             """
             Calculate the result and show it on the Screen.
             """
             dispatcher.evaluate()
-        
+
         CLEAR =    Special("C", handle_clear, 1, "Delete")
         DELETE =   Special("<", remove_last,  1, "Backspace")
         EVALUATE = Special("=", evaluate,     2, "Enter")
-        
+
         PLUS =     Operator("+", "+", 1, True)
         MINUS =    Operator("&ndash;", "-", 1, True)
         TIMES =    Operator("&times;", "*", 1, True)
         DIVIDE =   Operator("&divide;", "/", 1, True)
         DELIM =    Operator(".", ".")
         POWER =    Operator("^", "^")
-        
+
         self.grid = [
             CLEAR,    DELETE,   EVALUATE,
             Digit(7), Digit(8), Digit(9), PLUS,
@@ -248,7 +248,7 @@ class Keyboard(Nod):
             Digit(1), Digit(2), Digit(3), TIMES,
             DELIM,    Digit(0), POWER,    DIVIDE
         ]
-    
+
     def dispatcher_clipped(self):
         self.add_children(self.grid, True)
 
@@ -261,12 +261,12 @@ class App(Nod):
         self.root = $(root)
         self.DOM_path = root
         self.clip_dispatcher(Dispatcher(self))
-        
+
         self.add_child(Screen())
         self.add_child(Keyboard(), True)
-        
+
         self.dispatcher.prepare()
-    
+
     def run(self):
         self.root
         .hide()
